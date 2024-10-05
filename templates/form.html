@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Character</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #2c2c2e;
+            color: #ffffff;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .container {
+            background-color: #3a3a3c;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            max-width: 600px;
+            width: 100%;
+        }
+        h1 {
+            color: #ffcc00;
+        }
+        h1 a {
+            color: inherit;
+            font-size: inherit;
+            font-family: inherit;
+            text-decoration: none;
+        }
+        a {
+            text-align: center;
+            margin: 10px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        input, select {
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            outline: none;
+        }
+        button {
+            padding: 10px;
+            background-color: #ffcc00;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #e6b800;
+        }
+        .error {
+            color: #ff4d4d;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        .suggestions {
+            position: relative;
+        }
+        .suggestions-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: #3a3a3c;
+            border: 1px solid #555;
+            border-radius: 4px;
+            z-index: 1000;
+            max-height: 280px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            box-sizing: border-box;
+        }
+        .suggestion-item {
+            padding: 10px;
+            cursor: pointer;
+        }
+        .suggestion-item:hover {
+            background-color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><a href="https://tigercz11.pythonanywhere.com/">Search Character</a></h1>
+
+        <!-- Error message display -->
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% endif %}
+
+        <form id="character-form" method="POST" action="/submit">
+            <div class="suggestions">
+                <input type="text" id="character_name" name="character_name" placeholder="Enter character name" autocomplete="off" required>
+                <div class="suggestions-list" id="suggestions-list" style="display: none;"></div>
+            </div>
+            <input type="text" id="realm" name="realm" placeholder="Enter realm" required>
+            <button type="submit">Submit</button>
+        </form>
+
+        <div id="accounts-container">
+            {% if accounts %}
+                <h2>Characters:</h2>
+                {% for account_id, characters in accounts.items() %}
+                    <ul>
+                        {% for character in characters %}
+                            <li>
+                                <a href="https://worldofwarcraft.blizzard.com/en-gb/character/eu/{{ character.realm|replace(' ', '-') }}/{{ character.character_name|replace(' ', '-') }}" target="_blank">
+                                    {{ character.character_name }} - {{ character.realm }}
+                                </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const characterNameInput = document.getElementById('character_name');
+            const realmInput = document.getElementById('realm');
+            const suggestionsList = document.getElementById('suggestions-list');
+
+            characterNameInput.addEventListener('input', function() {
+                const query = this.value;
+                if (query.length < 2) {
+                    suggestionsList.style.display = 'none';
+                    return;
+                }
+
+                fetch(`/suggest_names?query=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        suggestionsList.innerHTML = '';
+                        if (data.length === 0) {
+                            suggestionsList.style.display = 'none';
+                            return;
+                        }
+                        data.forEach(suggestion => {
+                            const item = document.createElement('div');
+                            item.textContent = `${suggestion.name} - ${suggestion.realm}`;
+                            item.classList.add('suggestion-item');
+                            item.addEventListener('click', function() {
+                                characterNameInput.value = suggestion.name;
+                                realmInput.value = suggestion.realm;
+                                suggestionsList.style.display = 'none';
+                            });
+                            suggestionsList.appendChild(item);
+                        });
+                        suggestionsList.style.display = 'block';
+                    });
+            });
+
+            document.addEventListener('click', function(e) {
+                if (!suggestionsList.contains(e.target) && e.target !== characterNameInput) {
+                    suggestionsList.style.display = 'none';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
